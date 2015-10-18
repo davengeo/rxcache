@@ -47,7 +47,7 @@ public class EventController {
         return accepted().body("OK");
     }
 
-    interface EmitListener extends EventListener {
+    private interface EmitListener extends EventListener {
 
         void emit(String str);
 
