@@ -23,6 +23,9 @@ public class EventStream implements CommandLineRunner{
     @Autowired
     ApplicationContext context;
 
+    @Autowired
+    RegistryManager registryManager;
+
     @Override
     public void run(String... strings) throws Exception {
 
@@ -35,6 +38,7 @@ public class EventStream implements CommandLineRunner{
     private void init() {
         EventController.getStream().subscribe(string -> {
             LOG.info("GOTCHA:{}", string);
+            registryManager.put(string);
         });
     }
 
