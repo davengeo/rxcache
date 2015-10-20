@@ -10,18 +10,30 @@ import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.notifications.Listener;
 import org.infinispan.notifications.cachelistener.annotation.CacheEntryModified;
 import org.infinispan.notifications.cachelistener.event.CacheEntryModifiedEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import rx.Observable;
+import rx.Subscriber;
 
 import javax.annotation.PostConstruct;
+import java.util.EventListener;
 
 @Component
-public class RegistryManager {
+public class CacheStream {
 
-    private static Logger LOG = LoggerFactory.getLogger(RegistryManager.class);
-
+    private static EmitListener emitListener;
+    private static Observable<String> stream = Observable.
+            create((Subscriber<? super String> subscriber) -> {
+                register(subscriber::onNext);
+            });
     Cache<String, String> cache;
+
+    public static Observable<String> getStream() {
+        return stream;
+    }
+
+    private static void register(EmitListener listener) {
+        emitListener = listener;
+    }
 
     @PostConstruct
     public void init() {
@@ -35,14 +47,19 @@ public class RegistryManager {
         cache.put("one", value);
     }
 
+    private interface EmitListener extends EventListener {
+        void emit(String str);
+    }
+
     @Listener
-    public class PrintWhenAdded {
+    class PrintWhenAdded {
 
         @CacheEntryModified
         public void modified(CacheEntryModifiedEvent event) {
-            LOG.info("modified{}", event.getValue());
+            if (!event.isPre()) {
+                emitListener.emit((String) event.getValue());
+                System.out.println("event:" + event.getValue());
+            }
         }
-
     }
-
 }

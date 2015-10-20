@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import rx.Observable;
 
 import javax.annotation.PostConstruct;
 
@@ -24,7 +25,7 @@ public class EventStream implements CommandLineRunner{
     ApplicationContext context;
 
     @Autowired
-    RegistryManager registryManager;
+    CacheStream registryManager;
 
     @Override
     public void run(String... strings) throws Exception {
@@ -36,9 +37,18 @@ public class EventStream implements CommandLineRunner{
 
     @PostConstruct
     private void init() {
-        EventController.getStream().subscribe(string -> {
-            LOG.info("GOTCHA:{}", string);
-            registryManager.put(string);
+
+//
+//        CacheStream.getStream().subscribe(string -> {
+//            LOG.info("GOTCHA from Cache:{}", string);
+//        });
+
+        Observable<String> observable = CacheStream.getStream().mergeWith(EventController.getStream().doOnEach(notification -> {
+            registryManager.put((String) notification.getValue());
+        })).asObservable();
+
+        observable.subscribe(s -> {
+            LOG.info("Merged:{}", s);
         });
     }
 
